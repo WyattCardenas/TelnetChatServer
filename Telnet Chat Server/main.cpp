@@ -1,53 +1,82 @@
 #include <iostream>
-#include <WinSock2.h>
-#include <ws2tcpip.h>
-
-#pragma comment (lib, "Ws2_32.lib")
-
-#define DEFAULT_PORT 27
+#include "Server.h"
 
 int main()
 {
-	//Socket initialization
-	WSADATA wsaData;
-	if (WSAStartup(MAKEWORD(2, 2), &wsaData) == SOCKET_ERROR)
+	constexpr int DEFAULT_PORT = 69;
+
+	Server* serverHandler = new Server(DEFAULT_PORT);
+	printf("Server successfuly setup and listening on port %d\n", DEFAULT_PORT);
+
+
+	while (1)
 	{
-		printf("WSAStartup Failed: %d\n", WSAGetLastError());
-		WSACleanup();
-		return -1;
+		unsigned clientId = serverHandler->acceptNewClients();
+		if (clientId)
+		{
+			//TODO: - access newly connected user [DONE] 
+			//		- send currently connected users
+			const Client* client = serverHandler->GetClientInfo(clientId);
+			printf("New Connection from %s client ID %d\n", client->GetClientIpAddr(), clientId);
+			std::string welcomeMsg = "Welcome OwO\n";
+			send(client->GetSocket(), welcomeMsg.c_str(), welcomeMsg.size() + 1, 0);
+		}
+
+		//Process existing users
+		for (auto it = serverHandler->sessions.cbegin(); it != serverHandler->sessions.cend();)
+		{
+			bool disconnecting = false;
+
+			//iterate through all users
+			printf("Checking userId %d:\n", (*it)->GetClientId());
+			printf("test 1\n");
+			char buff[4096];
+			ZeroMemory(buff, 4096);
+			//recv stream from user
+			int msg_len = recv((*it)->GetSocket(), buff, 4096, 0);
+			printf("test 2\n");
+
+			if (msg_len <= 0)
+			{
+				printf("test 3\n");
+				disconnecting = true;
+				closesocket((*it)->GetSocket());
+				printf("Client closed connection\n");
+			}
+			else
+			{
+				printf("test 4\n");
+				printf("recv from user %d: %s\n", (*it)->GetClientId(), std::string(buff, msg_len).c_str());
+			}
+			
+			printf("test 5\n");
+			//if (buff[0])
+			//send((*it)->GetSocket(), buff, msg_len + 1, 0);
+
+			//check if command or message
+
+			//send stream to other users
+
+			if (disconnecting)
+			{
+				printf("test 6\n");
+				serverHandler->sessions.erase(it++);
+			}
+			else
+			{
+				printf("test 7\n");
+				++it;
+			}
+		}
 	}
 
-	//binding of ip adreses and port to socket
-	sockaddr_in hints;
-	hints.sin_family		= AF_INET;
-	hints.sin_port			= htons(DEFAULT_PORT); //port here
-	hints.sin_addr.s_addr	= INADDR_ANY;
+	WSACleanup();
 
-	//socket Creation
-	SOCKET listeningSocket;
-	listeningSocket = socket(AF_INET, SOCK_STREAM, 0); //SOCK_STREAM is for TCP
 
-	if (listeningSocket == INVALID_SOCKET)
-	{
-		printf("socket Failed: %d\n", WSAGetLastError());
-		WSACleanup();
-		return -1;
-	}
+	//While loop for accepting and echoing messages back to client
+	/*
+	FOR SINGLE CLIENT ONLY
 
-	if (bind(listeningSocket, (sockaddr*)&hints, sizeof(hints)) == SOCKET_ERROR)
-	{
-		printf("bind Failed: %d\n", WSAGetLastError());
-		WSACleanup();
-		return -1;
-	}
-
-	if (listen(listeningSocket, 5) == SOCKET_ERROR)
-	{
-		printf("listen Failed: %d\n", WSAGetLastError());
-		WSACleanup();
-		return -1;
-	}
-	
 	//Wait for connection from a client
 	sockaddr_in client_addr;
 	int client_addr_len = sizeof(client_addr);
@@ -72,7 +101,6 @@ int main()
 		printf("%s connected on port %d\n", host, ntohs(client_addr.sin_port));
 	}
 
-	//While loop for accepting and echoing messages back to client
 	char buff[4096];
 	while (true)
 	{
@@ -96,6 +124,7 @@ int main()
 	}
 
 	closesocket(clientSocket);
-	WSACleanup();
+	
+	*/
 	return 0;
 }
