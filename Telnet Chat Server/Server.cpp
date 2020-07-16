@@ -42,42 +42,33 @@ Server::Server(int const defaultPort)
 		WSACleanup();
 		exit(1);
 	}
-
-	FD_ZERO(&master);
-	FD_SET(listeningSocket, &master);
 }
 
 Server::~Server()
 {
 }
 
-unsigned Server::acceptNewClients()
+void Server::AcceptNewClients()
 {
-	int socketCount = master.fd_count;
-
-	for (int i = 0; i < socketCount; i++)
+	while (1)
 	{
-		SOCKET currentSocket = master.fd_array[i];
+		sockaddr_in clientInfo;
+		int clientInfoLen = sizeof(clientInfo);
 
-		if (currentSocket == listeningSocket)
+		SOCKET clientSocket = accept(listeningSocket, (sockaddr*)&clientInfo, &clientInfoLen);
+
+		if (clientSocket != INVALID_SOCKET)
 		{
-			sockaddr_in clientInfo;
-			int clientInfoLen = sizeof(clientInfo);
+			Client* client = new Client(clientCounter, clientSocket, clientInfo);
+			sessions.push_back(client);
 
-			SOCKET clientSocket = accept(listeningSocket, (sockaddr*)&clientInfo, &clientInfoLen);
-
-			if (clientSocket != INVALID_SOCKET)
-			{
-				FD_SET(clientSocket, &master);
-				Client* client = new Client(clientCounter, clientSocket, clientInfo);
-				sessions.push_back(client);
-
-				return clientCounter++;
-			}
+			//TODO: - access newly connected user [DONE] 
+			//		- send currently connected users
+			printf("New Connection from %s client ID %d\n", client->GetClientIpAddr(), clientCounter);
+			std::string welcomeMsg = "Welcome\n";
+			send(clientSocket, welcomeMsg.c_str(), welcomeMsg.size() + 1, 0);
 		}
 	}
-
-	return 0;
 }
 
 const Client* Server::GetClientInfo(unsigned clientId)

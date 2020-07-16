@@ -15,7 +15,7 @@ public:
 	Server(int const defaultPort);
 	~Server();
 
-	unsigned acceptNewClients();
+	void AcceptNewClients();
 	const Client* GetClientInfo(unsigned);
 	
 	std::vector<Client*> sessions;
@@ -23,9 +23,7 @@ public:
 
 private:
 	SOCKET listeningSocket;
-	unsigned clientCounter = 1;
-	fd_set master;
-	
+	unsigned clientCounter = 1;	
 };
 
 #endif //SERVER_H
